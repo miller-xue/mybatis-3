@@ -115,12 +115,17 @@ public class XMLConfigBuilder extends BaseBuilder {
       propertiesElement(root.evalNode("properties"));
       // 解析settings
       Properties settings = settingsAsProperties(root.evalNode("settings"));
+      // 加载自定义配置
       loadCustomVfs(settings);
+      // 加载自定义日志配置
       loadCustomLogImpl(settings);
+
       // 解析typeAliases
       typeAliasesElement(root.evalNode("typeAliases"));
+
       // 解析plugins
       pluginElement(root.evalNode("plugins"));
+
       // 解析objectFactory
       objectFactoryElement(root.evalNode("objectFactory"));
       // 解析objectWrapperFactory
@@ -179,17 +184,24 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void typeAliasesElement(XNode parent) {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
+        // 解析包
         if ("package".equals(child.getName())) {
           String typeAliasPackage = child.getStringAttribute("name");
+          // 按照包名批量注册
           configuration.getTypeAliasRegistry().registerAliases(typeAliasPackage);
         } else {
+
+          // 自定义别名 <typeAlias/>
           String alias = child.getStringAttribute("alias");
           String type = child.getStringAttribute("type");
           try {
+            // 获取Class对象
             Class<?> clazz = Resources.classForName(type);
+            // 别名为空直接注册Class对象
             if (alias == null) {
               typeAliasRegistry.registerAlias(clazz);
             } else {
+              // 按照别名注册Class对象
               typeAliasRegistry.registerAlias(alias, clazz);
             }
           } catch (ClassNotFoundException e) {
@@ -202,11 +214,17 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private void pluginElement(XNode parent) throws Exception {
     if (parent != null) {
+      // 遍历插件拦截器
       for (XNode child : parent.getChildren()) {
+        // 拦截器全类名
         String interceptor = child.getStringAttribute("interceptor");
+        // 拦截器对应的属性配置文件
         Properties properties = child.getChildrenAsProperties();
+        // 构建拦截器对象
         Interceptor interceptorInstance = (Interceptor) resolveClass(interceptor).getDeclaredConstructor().newInstance();
+        // 设置属性配置
         interceptorInstance.setProperties(properties);
+        // 添加拦截器
         configuration.addInterceptor(interceptorInstance);
       }
     }
@@ -304,17 +322,24 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void environmentsElement(XNode context) throws Exception {
     if (context != null) {
       if (environment == null) {
+        // 获取默认的环境id
         environment = context.getStringAttribute("default");
       }
+      // 遍历所有环境
       for (XNode child : context.getChildren()) {
+        // 环境id
         String id = child.getStringAttribute("id");
         if (isSpecifiedEnvironment(id)) {
+          // 获取事务管理器
           TransactionFactory txFactory = transactionManagerElement(child.evalNode("transactionManager"));
+          // 获取数据源对象
           DataSourceFactory dsFactory = dataSourceElement(child.evalNode("dataSource"));
           DataSource dataSource = dsFactory.getDataSource();
+          // 构建环境对象
           Environment.Builder environmentBuilder = new Environment.Builder(id)
-              .transactionFactory(txFactory)
-              .dataSource(dataSource);
+            .transactionFactory(txFactory)
+            .dataSource(dataSource);
+
           configuration.setEnvironment(environmentBuilder.build());
         }
       }
@@ -340,6 +365,12 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 构建事务管理器对象，并设置properties
+   * @param context
+   * @return
+   * @throws Exception
+   */
   private TransactionFactory transactionManagerElement(XNode context) throws Exception {
     if (context != null) {
       String type = context.getStringAttribute("type");
@@ -353,8 +384,11 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private DataSourceFactory dataSourceElement(XNode context) throws Exception {
     if (context != null) {
+      // 数据源类型
       String type = context.getStringAttribute("type");
+      // 数据源配置
       Properties props = context.getChildrenAsProperties();
+      // 创建数据源对象工厂
       DataSourceFactory factory = (DataSourceFactory) resolveClass(type).getDeclaredConstructor().newInstance();
       factory.setProperties(props);
       return factory;
@@ -392,10 +426,13 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void mapperElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
+        // <package>标签
         if ("package".equals(child.getName())) {
           String mapperPackage = child.getStringAttribute("name");
           configuration.addMappers(mapperPackage);
-        } else {
+        }
+        // <mapper>标签
+        else {
           String resource = child.getStringAttribute("resource");
           String url = child.getStringAttribute("url");
           String mapperClass = child.getStringAttribute("class");
