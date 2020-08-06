@@ -432,6 +432,7 @@ public class XMLConfigBuilder extends BaseBuilder {
           configuration.addMappers(mapperPackage);
         }
         // <mapper>标签
+        // 解析优先级 resource > url > mapperClass
         else {
           String resource = child.getStringAttribute("resource");
           String url = child.getStringAttribute("url");
@@ -450,6 +451,7 @@ public class XMLConfigBuilder extends BaseBuilder {
             Class<?> mapperInterface = Resources.classForName(mapperClass);
             configuration.addMapper(mapperInterface);
           } else {
+            // 两者共存直接异常
             throw new BuilderException("A mapper element may only specify a url, resource or class, but not more than one.");
           }
         }
